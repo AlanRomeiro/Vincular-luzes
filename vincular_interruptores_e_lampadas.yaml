@@ -1,0 +1,63 @@
+blueprint:
+  name: Vincular Interruptores e Luzes
+  description: |
+    ## Vincule vários interruptores e luzes juntos v1.2.0
+    Selecione várias entidades de interruptores e luzes para vincular o estado de ligado/desligado delas. Quando uma entidade é ligada ou desligada, as outras entidades selecionadas receberão um comando correspondente de ligar ou desligar.
+    Requer Home Assistant 2022.5.0 ou mais recente.
+  domain: automation
+  input:
+    lights:
+      name: Entidades de Luz
+      description: Selecione as entidades de luz que deseja vincular.
+      selector:
+        entity:
+          domain:
+            - light
+          multiple: true
+    switches:
+      name: Entidades de Interruptor
+      description: Selecione as entidades de interruptor que deseja vincular.
+      selector:
+        entity:
+          domain:
+            - switch
+          multiple: true
+    sync_lights:
+      name: Sincronizar Luzes (Luz para Luz)
+      description: Selecione se deseja sincronizar as luzes entre si.
+      default: false
+      selector:
+        boolean: {}
+  homeassistant:
+    min_version: 2022.5.0
+variables:
+  lights: !input lights
+  switches: !input switches
+  sync_lights: !input sync_lights
+trigger:
+  - platform: state
+    entity_id: !input switches
+  - platform: state
+    entity_id: !input lights
+mode: queued
+max_exceeded: silent
+condition:
+  - condition: template
+    value_template: "{{ trigger.to_state.state != trigger.from_state.state }}"
+  - condition: template
+    value_template:
+      "{{ trigger.to_state.context.parent_id is none or  (trigger.to_state.context.id         !=
+      this.context.id and  trigger.to_state.context.parent_id  != this.context.id) }}
+      "
+action:
+  - service: switch.turn_{{ trigger.to_state.state }}
+    target:
+      entity_id:
+        '{{ expand(switches) | selectattr("entity_id", "!=", trigger.entity_id)
+        | map(attribute="entity_id") | list }}'
+  - service: light.turn_{{ trigger.to_state.state }}
+    target:
+      entity_id:
+        '{% if trigger.entity_id.split(".")[0] == "switch" or sync_lights %}{{ expand(lights) | selectattr("entity_id", "!=", trigger.entity_id)
+        | map(attribute="entity_id") | list }}{% else %}[]{% endif %}'
+        
