@@ -30,6 +30,7 @@ blueprint:
         boolean: {}
   homeassistant:
     min_version: 2022.5.0
+  source_url: https://github.com/AlanRomeiro/Vincular-luzes/blob/main/vincular_interruptores_e_lampadas.yaml
 variables:
   lights: !input lights
   switches: !input switches
